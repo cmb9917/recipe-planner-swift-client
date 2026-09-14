@@ -1,0 +1,3436 @@
+openapi: 3.1.0
+info:
+  title: Recipe API
+  version: 1.0.0
+paths:
+  /api/v1/auth/session:
+    post:
+      summary: Exchange a native ID token for an API access/refresh token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider:
+                  type: string
+                  const: google
+                idToken:
+                  type: string
+                  minLength: 1
+                deviceName:
+                  type: string
+                  maxLength: 200
+              required:
+                - provider
+                - idToken
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      name:
+                        type:
+                          - string
+                          - 'null'
+                      displayName:
+                        type:
+                          - string
+                          - 'null'
+                    required:
+                      - id
+                      - email
+                      - name
+                      - displayName
+                    additionalProperties: false
+                required:
+                  - accessToken
+                  - refreshToken
+                  - user
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+        '502':
+          description: UPSTREAM
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UPSTREAM
+                      message:
+                        type: string
+  /api/v1/auth/refresh:
+    post:
+      summary: Rotate a refresh token for a new access/refresh token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  minLength: 1
+              required:
+                - refreshToken
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                required:
+                  - accessToken
+                  - refreshToken
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/auth/logout:
+    post:
+      summary: Revoke a refresh token and its rotation chain
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  minLength: 1
+              required:
+                - refreshToken
+              additionalProperties: false
+      responses:
+        '204':
+          description: No content
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/recipes:
+    get:
+      summary: List the caller's family's recipes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - BREAKFAST
+              - DINNER
+              - DESSERT
+              - COCKTAILS
+        - name: tags
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            default: 50
+            type: integer
+            exclusiveMinimum: 0
+            maximum: 100
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recipes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        category:
+                          type: string
+                          enum:
+                            - BREAKFAST
+                            - DINNER
+                            - DESSERT
+                            - COCKTAILS
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        featured:
+                          type: boolean
+                        content:
+                          type: object
+                          properties:
+                            title:
+                              type: string
+                              minLength: 1
+                            prepTime:
+                              type:
+                                - integer
+                                - 'null'
+                              exclusiveMinimum: 0
+                              maximum: 9007199254740991
+                            cookTime:
+                              type:
+                                - integer
+                                - 'null'
+                              exclusiveMinimum: 0
+                              maximum: 9007199254740991
+                            servings:
+                              type:
+                                - integer
+                                - 'null'
+                              exclusiveMinimum: 0
+                              maximum: 9007199254740991
+                            description:
+                              type:
+                                - string
+                                - 'null'
+                            sourceUrl:
+                              type:
+                                - string
+                                - 'null'
+                              format: uri
+                            imageUrl:
+                              type:
+                                - string
+                                - 'null'
+                              format: uri
+                            ingredients:
+                              type: array
+                              items:
+                                anyOf:
+                                  - type: string
+                                  - type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                        minLength: 1
+                                      items:
+                                        type: array
+                                        items:
+                                          type: string
+                                    required:
+                                      - name
+                                      - items
+                                    additionalProperties: false
+                            steps:
+                              type: array
+                              items:
+                                type: string
+                            notes:
+                              type: array
+                              items:
+                                type: string
+                          required:
+                            - title
+                            - ingredients
+                            - steps
+                            - notes
+                          additionalProperties: false
+                        createdBy:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type:
+                                - string
+                                - 'null'
+                          required:
+                            - id
+                            - displayName
+                          additionalProperties: false
+                        shareUrl:
+                          type: string
+                          format: uri
+                        createdAt:
+                          type: string
+                          format: date-time
+                          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                      required:
+                        - id
+                        - title
+                        - category
+                        - tags
+                        - featured
+                        - content
+                        - createdBy
+                        - shareUrl
+                        - createdAt
+                        - updatedAt
+                      additionalProperties: false
+                  nextCursor:
+                    type:
+                      - string
+                      - 'null'
+                required:
+                  - recipes
+                  - nextCursor
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+    post:
+      summary: Create a recipe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                category:
+                  type: string
+                  enum:
+                    - BREAKFAST
+                    - DINNER
+                    - DESSERT
+                    - COCKTAILS
+                tags:
+                  type: array
+                  items:
+                    type: string
+                content:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                      minLength: 1
+                    prepTime:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 9007199254740991
+                    cookTime:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 9007199254740991
+                    servings:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 9007199254740991
+                    description:
+                      type: string
+                    sourceUrl:
+                      type: string
+                      format: uri
+                    imageUrl:
+                      type: string
+                      format: uri
+                    ingredients:
+                      type: array
+                      items:
+                        anyOf:
+                          - type: string
+                          - type: object
+                            properties:
+                              name:
+                                type: string
+                                minLength: 1
+                              items:
+                                type: array
+                                items:
+                                  type: string
+                            required:
+                              - name
+                              - items
+                            additionalProperties: false
+                    steps:
+                      type: array
+                      items:
+                        type: string
+                    notes:
+                      type: array
+                      items:
+                        type: string
+                  required:
+                    - title
+                    - ingredients
+                    - steps
+                    - notes
+                  additionalProperties: false
+              required:
+                - title
+                - category
+                - tags
+                - content
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  category:
+                    type: string
+                    enum:
+                      - BREAKFAST
+                      - DINNER
+                      - DESSERT
+                      - COCKTAILS
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  featured:
+                    type: boolean
+                  content:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        minLength: 1
+                      prepTime:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      cookTime:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      servings:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      description:
+                        type:
+                          - string
+                          - 'null'
+                      sourceUrl:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                      imageUrl:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                      ingredients:
+                        type: array
+                        items:
+                          anyOf:
+                            - type: string
+                            - type: object
+                              properties:
+                                name:
+                                  type: string
+                                  minLength: 1
+                                items:
+                                  type: array
+                                  items:
+                                    type: string
+                              required:
+                                - name
+                                - items
+                              additionalProperties: false
+                      steps:
+                        type: array
+                        items:
+                          type: string
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                    required:
+                      - title
+                      - ingredients
+                      - steps
+                      - notes
+                    additionalProperties: false
+                  createdBy:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type:
+                          - string
+                          - 'null'
+                    required:
+                      - id
+                      - displayName
+                    additionalProperties: false
+                  shareUrl:
+                    type: string
+                    format: uri
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                required:
+                  - id
+                  - title
+                  - category
+                  - tags
+                  - featured
+                  - content
+                  - createdBy
+                  - shareUrl
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/recipes/{id}:
+    get:
+      summary: Get a single recipe
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  category:
+                    type: string
+                    enum:
+                      - BREAKFAST
+                      - DINNER
+                      - DESSERT
+                      - COCKTAILS
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  featured:
+                    type: boolean
+                  content:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        minLength: 1
+                      prepTime:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      cookTime:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      servings:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      description:
+                        type:
+                          - string
+                          - 'null'
+                      sourceUrl:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                      imageUrl:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                      ingredients:
+                        type: array
+                        items:
+                          anyOf:
+                            - type: string
+                            - type: object
+                              properties:
+                                name:
+                                  type: string
+                                  minLength: 1
+                                items:
+                                  type: array
+                                  items:
+                                    type: string
+                              required:
+                                - name
+                                - items
+                              additionalProperties: false
+                      steps:
+                        type: array
+                        items:
+                          type: string
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                    required:
+                      - title
+                      - ingredients
+                      - steps
+                      - notes
+                    additionalProperties: false
+                  createdBy:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type:
+                          - string
+                          - 'null'
+                    required:
+                      - id
+                      - displayName
+                    additionalProperties: false
+                  shareUrl:
+                    type: string
+                    format: uri
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                required:
+                  - id
+                  - title
+                  - category
+                  - tags
+                  - featured
+                  - content
+                  - createdBy
+                  - shareUrl
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: NOT_FOUND
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+    patch:
+      summary: Update a recipe
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                category:
+                  type: string
+                  enum:
+                    - BREAKFAST
+                    - DINNER
+                    - DESSERT
+                    - COCKTAILS
+                tags:
+                  type: array
+                  items:
+                    type: string
+                content:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                      minLength: 1
+                    prepTime:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 9007199254740991
+                    cookTime:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 9007199254740991
+                    servings:
+                      type: integer
+                      exclusiveMinimum: 0
+                      maximum: 9007199254740991
+                    description:
+                      type: string
+                    sourceUrl:
+                      type: string
+                      format: uri
+                    imageUrl:
+                      type: string
+                      format: uri
+                    ingredients:
+                      type: array
+                      items:
+                        anyOf:
+                          - type: string
+                          - type: object
+                            properties:
+                              name:
+                                type: string
+                                minLength: 1
+                              items:
+                                type: array
+                                items:
+                                  type: string
+                            required:
+                              - name
+                              - items
+                            additionalProperties: false
+                    steps:
+                      type: array
+                      items:
+                        type: string
+                    notes:
+                      type: array
+                      items:
+                        type: string
+                  required:
+                    - title
+                    - ingredients
+                    - steps
+                    - notes
+                  additionalProperties: false
+              required:
+                - title
+                - category
+                - tags
+                - content
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  category:
+                    type: string
+                    enum:
+                      - BREAKFAST
+                      - DINNER
+                      - DESSERT
+                      - COCKTAILS
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  featured:
+                    type: boolean
+                  content:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        minLength: 1
+                      prepTime:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      cookTime:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      servings:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      description:
+                        type:
+                          - string
+                          - 'null'
+                      sourceUrl:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                      imageUrl:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                      ingredients:
+                        type: array
+                        items:
+                          anyOf:
+                            - type: string
+                            - type: object
+                              properties:
+                                name:
+                                  type: string
+                                  minLength: 1
+                                items:
+                                  type: array
+                                  items:
+                                    type: string
+                              required:
+                                - name
+                                - items
+                              additionalProperties: false
+                      steps:
+                        type: array
+                        items:
+                          type: string
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                    required:
+                      - title
+                      - ingredients
+                      - steps
+                      - notes
+                    additionalProperties: false
+                  createdBy:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type:
+                          - string
+                          - 'null'
+                    required:
+                      - id
+                      - displayName
+                    additionalProperties: false
+                  shareUrl:
+                    type: string
+                    format: uri
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                required:
+                  - id
+                  - title
+                  - category
+                  - tags
+                  - featured
+                  - content
+                  - createdBy
+                  - shareUrl
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: NOT_FOUND
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+    delete:
+      summary: Delete a recipe (soft delete)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: NOT_FOUND
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/recipes/{id}/featured:
+    put:
+      summary: Set a recipe's featured flag (idempotent)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                featured:
+                  type: boolean
+              required:
+                - featured
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  category:
+                    type: string
+                    enum:
+                      - BREAKFAST
+                      - DINNER
+                      - DESSERT
+                      - COCKTAILS
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  featured:
+                    type: boolean
+                  content:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        minLength: 1
+                      prepTime:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      cookTime:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      servings:
+                        type:
+                          - integer
+                          - 'null'
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      description:
+                        type:
+                          - string
+                          - 'null'
+                      sourceUrl:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                      imageUrl:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                      ingredients:
+                        type: array
+                        items:
+                          anyOf:
+                            - type: string
+                            - type: object
+                              properties:
+                                name:
+                                  type: string
+                                  minLength: 1
+                                items:
+                                  type: array
+                                  items:
+                                    type: string
+                              required:
+                                - name
+                                - items
+                              additionalProperties: false
+                      steps:
+                        type: array
+                        items:
+                          type: string
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                    required:
+                      - title
+                      - ingredients
+                      - steps
+                      - notes
+                    additionalProperties: false
+                  createdBy:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type:
+                          - string
+                          - 'null'
+                    required:
+                      - id
+                      - displayName
+                    additionalProperties: false
+                  shareUrl:
+                    type: string
+                    format: uri
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                required:
+                  - id
+                  - title
+                  - category
+                  - tags
+                  - featured
+                  - content
+                  - createdBy
+                  - shareUrl
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: NOT_FOUND
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/tags:
+    get:
+      summary: List every tag used across the caller's family's recipes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                required:
+                  - tags
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/me:
+    get:
+      summary: Get the caller's own profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  name:
+                    type:
+                      - string
+                      - 'null'
+                  displayName:
+                    type:
+                      - string
+                      - 'null'
+                required:
+                  - id
+                  - email
+                  - name
+                  - displayName
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+    patch:
+      summary: Update the caller's display name
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+              required:
+                - displayName
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  name:
+                    type:
+                      - string
+                      - 'null'
+                  displayName:
+                    type:
+                      - string
+                      - 'null'
+                required:
+                  - id
+                  - email
+                  - name
+                  - displayName
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/planner:
+    get:
+      summary: List the caller's family's planner entries for a week
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: week
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        weekStart:
+                          type: string
+                        dayOfWeek:
+                          type: integer
+                          minimum: 0
+                          maximum: 6
+                        order:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        type:
+                          type: string
+                          enum:
+                            - RECIPE
+                            - CUSTOM
+                        recipe:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            category:
+                              type: string
+                              enum:
+                                - BREAKFAST
+                                - DINNER
+                                - DESSERT
+                                - COCKTAILS
+                            tags:
+                              type: array
+                              items:
+                                type: string
+                            featured:
+                              type: boolean
+                            content:
+                              type: object
+                              properties:
+                                title:
+                                  type: string
+                                  minLength: 1
+                                prepTime:
+                                  type:
+                                    - integer
+                                    - 'null'
+                                  exclusiveMinimum: 0
+                                  maximum: 9007199254740991
+                                cookTime:
+                                  type:
+                                    - integer
+                                    - 'null'
+                                  exclusiveMinimum: 0
+                                  maximum: 9007199254740991
+                                servings:
+                                  type:
+                                    - integer
+                                    - 'null'
+                                  exclusiveMinimum: 0
+                                  maximum: 9007199254740991
+                                description:
+                                  type:
+                                    - string
+                                    - 'null'
+                                sourceUrl:
+                                  type:
+                                    - string
+                                    - 'null'
+                                  format: uri
+                                imageUrl:
+                                  type:
+                                    - string
+                                    - 'null'
+                                  format: uri
+                                ingredients:
+                                  type: array
+                                  items:
+                                    anyOf:
+                                      - type: string
+                                      - type: object
+                                        properties:
+                                          name:
+                                            type: string
+                                            minLength: 1
+                                          items:
+                                            type: array
+                                            items:
+                                              type: string
+                                        required:
+                                          - name
+                                          - items
+                                        additionalProperties: false
+                                steps:
+                                  type: array
+                                  items:
+                                    type: string
+                                notes:
+                                  type: array
+                                  items:
+                                    type: string
+                              required:
+                                - title
+                                - ingredients
+                                - steps
+                                - notes
+                              additionalProperties: false
+                            createdBy:
+                              type:
+                                - object
+                                - 'null'
+                              properties:
+                                id:
+                                  type: string
+                                displayName:
+                                  type:
+                                    - string
+                                    - 'null'
+                              required:
+                                - id
+                                - displayName
+                              additionalProperties: false
+                            shareUrl:
+                              type: string
+                              format: uri
+                            createdAt:
+                              type: string
+                              format: date-time
+                              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                          required:
+                            - id
+                            - title
+                            - category
+                            - tags
+                            - featured
+                            - content
+                            - createdBy
+                            - shareUrl
+                            - createdAt
+                            - updatedAt
+                          additionalProperties: false
+                        customText:
+                          type:
+                            - string
+                            - 'null'
+                        createdBy:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type:
+                                - string
+                                - 'null'
+                          required:
+                            - id
+                            - displayName
+                          additionalProperties: false
+                        createdAt:
+                          type: string
+                          format: date-time
+                          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                      required:
+                        - id
+                        - weekStart
+                        - dayOfWeek
+                        - order
+                        - type
+                        - recipe
+                        - customText
+                        - createdBy
+                        - createdAt
+                        - updatedAt
+                      additionalProperties: false
+                required:
+                  - entries
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+    post:
+      summary: Add a recipe or custom entry to the planner
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      const: RECIPE
+                    weekStart:
+                      type: string
+                      pattern: ^\d{4}-\d{2}-\d{2}$
+                    dayOfWeek:
+                      type: integer
+                      minimum: 0
+                      maximum: 6
+                    recipeId:
+                      type: string
+                  required:
+                    - type
+                    - weekStart
+                    - dayOfWeek
+                    - recipeId
+                  additionalProperties: false
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      const: CUSTOM
+                    weekStart:
+                      type: string
+                      pattern: ^\d{4}-\d{2}-\d{2}$
+                    dayOfWeek:
+                      type: integer
+                      minimum: 0
+                      maximum: 6
+                    text:
+                      type: string
+                      minLength: 1
+                  required:
+                    - type
+                    - weekStart
+                    - dayOfWeek
+                    - text
+                  additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  weekStart:
+                    type: string
+                  dayOfWeek:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                  order:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  type:
+                    type: string
+                    enum:
+                      - RECIPE
+                      - CUSTOM
+                  recipe:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      id:
+                        type: string
+                      title:
+                        type: string
+                      category:
+                        type: string
+                        enum:
+                          - BREAKFAST
+                          - DINNER
+                          - DESSERT
+                          - COCKTAILS
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                      featured:
+                        type: boolean
+                      content:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                            minLength: 1
+                          prepTime:
+                            type:
+                              - integer
+                              - 'null'
+                            exclusiveMinimum: 0
+                            maximum: 9007199254740991
+                          cookTime:
+                            type:
+                              - integer
+                              - 'null'
+                            exclusiveMinimum: 0
+                            maximum: 9007199254740991
+                          servings:
+                            type:
+                              - integer
+                              - 'null'
+                            exclusiveMinimum: 0
+                            maximum: 9007199254740991
+                          description:
+                            type:
+                              - string
+                              - 'null'
+                          sourceUrl:
+                            type:
+                              - string
+                              - 'null'
+                            format: uri
+                          imageUrl:
+                            type:
+                              - string
+                              - 'null'
+                            format: uri
+                          ingredients:
+                            type: array
+                            items:
+                              anyOf:
+                                - type: string
+                                - type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                      minLength: 1
+                                    items:
+                                      type: array
+                                      items:
+                                        type: string
+                                  required:
+                                    - name
+                                    - items
+                                  additionalProperties: false
+                          steps:
+                            type: array
+                            items:
+                              type: string
+                          notes:
+                            type: array
+                            items:
+                              type: string
+                        required:
+                          - title
+                          - ingredients
+                          - steps
+                          - notes
+                        additionalProperties: false
+                      createdBy:
+                        type:
+                          - object
+                          - 'null'
+                        properties:
+                          id:
+                            type: string
+                          displayName:
+                            type:
+                              - string
+                              - 'null'
+                        required:
+                          - id
+                          - displayName
+                        additionalProperties: false
+                      shareUrl:
+                        type: string
+                        format: uri
+                      createdAt:
+                        type: string
+                        format: date-time
+                        pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                    required:
+                      - id
+                      - title
+                      - category
+                      - tags
+                      - featured
+                      - content
+                      - createdBy
+                      - shareUrl
+                      - createdAt
+                      - updatedAt
+                    additionalProperties: false
+                  customText:
+                    type:
+                      - string
+                      - 'null'
+                  createdBy:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type:
+                          - string
+                          - 'null'
+                    required:
+                      - id
+                      - displayName
+                    additionalProperties: false
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                required:
+                  - id
+                  - weekStart
+                  - dayOfWeek
+                  - order
+                  - type
+                  - recipe
+                  - customText
+                  - createdBy
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: NOT_FOUND
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/planner/{id}:
+    delete:
+      summary: Remove a planner entry
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: NOT_FOUND
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/family:
+    get:
+      summary: Get the caller's family — members and invite state
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  inviteToken:
+                    type:
+                      - string
+                      - 'null'
+                  inviteExpiresAt:
+                    type:
+                      - string
+                      - 'null'
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                  members:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                        displayName:
+                          type:
+                            - string
+                            - 'null'
+                        email:
+                          type: string
+                        image:
+                          type:
+                            - string
+                            - 'null'
+                      required:
+                        - id
+                        - name
+                        - displayName
+                        - email
+                        - image
+                      additionalProperties: false
+                required:
+                  - id
+                  - name
+                  - inviteToken
+                  - inviteExpiresAt
+                  - members
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+    patch:
+      summary: Rename the caller's family
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+                - name
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  inviteToken:
+                    type:
+                      - string
+                      - 'null'
+                  inviteExpiresAt:
+                    type:
+                      - string
+                      - 'null'
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                  members:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                        displayName:
+                          type:
+                            - string
+                            - 'null'
+                        email:
+                          type: string
+                        image:
+                          type:
+                            - string
+                            - 'null'
+                      required:
+                        - id
+                        - name
+                        - displayName
+                        - email
+                        - image
+                      additionalProperties: false
+                required:
+                  - id
+                  - name
+                  - inviteToken
+                  - inviteExpiresAt
+                  - members
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/family/invite:
+    post:
+      summary: Generate (or replace) the family's invite link
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inviteToken:
+                    type: string
+                  inviteExpiresAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                required:
+                  - inviteToken
+                  - inviteExpiresAt
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+    delete:
+      summary: Revoke the family's active invite link
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: No content
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/family/join:
+    post:
+      summary: Join a family using an invite token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  minLength: 1
+              required:
+                - token
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  familyId:
+                    type: string
+                  familyName:
+                    type: string
+                required:
+                  - familyId
+                  - familyName
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: NOT_FOUND
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/family/members/{userId}:
+    delete:
+      summary: Remove a member from the caller's family
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: NOT_FOUND
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/family/leave:
+    post:
+      summary: Leave the caller's family, forming a new solo family
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: No content
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+  /api/v1/ai/recipe:
+    post:
+      summary: Generate recipe content from free text, a URL, or a photo supplied as base64-encoded JPEG (re-encode other formats to JPEG client-side before uploading), max 1568px on the longest edge
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                photoBase64:
+                  type: string
+                  maxLength: 6990507
+              additionalProperties: false
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        minLength: 1
+                      prepTime:
+                        type: integer
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      cookTime:
+                        type: integer
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      servings:
+                        type: integer
+                        exclusiveMinimum: 0
+                        maximum: 9007199254740991
+                      description:
+                        type: string
+                      sourceUrl:
+                        type: string
+                        format: uri
+                      imageUrl:
+                        type: string
+                        format: uri
+                      ingredients:
+                        type: array
+                        items:
+                          anyOf:
+                            - type: string
+                            - type: object
+                              properties:
+                                name:
+                                  type: string
+                                  minLength: 1
+                                items:
+                                  type: array
+                                  items:
+                                    type: string
+                              required:
+                                - name
+                                - items
+                              additionalProperties: false
+                      steps:
+                        type: array
+                        items:
+                          type: string
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                    required:
+                      - title
+                      - ingredients
+                      - steps
+                      - notes
+                    additionalProperties: false
+                required:
+                  - content
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+        '502':
+          description: UPSTREAM
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UPSTREAM
+                      message:
+                        type: string
+  /api/v1/sync:
+    get:
+      summary: 'Delta sync — changed/deleted recipes and planner entries since a cursor, or a full snapshot. If the response''s familyId differs from what was sent, the client MUST adopt the new family.id before requesting the next page, or a family mismatch will keep forcing a full resync. Pages 2+ of a paginated full sync (full: false after the first page) may include tombstone ids for rows the client never had — deleting an unknown id is a no-op.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+        - name: familyId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  serverTime:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                  full:
+                    type: boolean
+                  recipes:
+                    type: object
+                    properties:
+                      changed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            category:
+                              type: string
+                              enum:
+                                - BREAKFAST
+                                - DINNER
+                                - DESSERT
+                                - COCKTAILS
+                            tags:
+                              type: array
+                              items:
+                                type: string
+                            featured:
+                              type: boolean
+                            content:
+                              type: object
+                              properties:
+                                title:
+                                  type: string
+                                  minLength: 1
+                                prepTime:
+                                  type:
+                                    - integer
+                                    - 'null'
+                                  exclusiveMinimum: 0
+                                  maximum: 9007199254740991
+                                cookTime:
+                                  type:
+                                    - integer
+                                    - 'null'
+                                  exclusiveMinimum: 0
+                                  maximum: 9007199254740991
+                                servings:
+                                  type:
+                                    - integer
+                                    - 'null'
+                                  exclusiveMinimum: 0
+                                  maximum: 9007199254740991
+                                description:
+                                  type:
+                                    - string
+                                    - 'null'
+                                sourceUrl:
+                                  type:
+                                    - string
+                                    - 'null'
+                                  format: uri
+                                imageUrl:
+                                  type:
+                                    - string
+                                    - 'null'
+                                  format: uri
+                                ingredients:
+                                  type: array
+                                  items:
+                                    anyOf:
+                                      - type: string
+                                      - type: object
+                                        properties:
+                                          name:
+                                            type: string
+                                            minLength: 1
+                                          items:
+                                            type: array
+                                            items:
+                                              type: string
+                                        required:
+                                          - name
+                                          - items
+                                        additionalProperties: false
+                                steps:
+                                  type: array
+                                  items:
+                                    type: string
+                                notes:
+                                  type: array
+                                  items:
+                                    type: string
+                              required:
+                                - title
+                                - ingredients
+                                - steps
+                                - notes
+                              additionalProperties: false
+                            createdBy:
+                              type:
+                                - object
+                                - 'null'
+                              properties:
+                                id:
+                                  type: string
+                                displayName:
+                                  type:
+                                    - string
+                                    - 'null'
+                              required:
+                                - id
+                                - displayName
+                              additionalProperties: false
+                            shareUrl:
+                              type: string
+                              format: uri
+                            createdAt:
+                              type: string
+                              format: date-time
+                              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                          required:
+                            - id
+                            - title
+                            - category
+                            - tags
+                            - featured
+                            - content
+                            - createdBy
+                            - shareUrl
+                            - createdAt
+                            - updatedAt
+                          additionalProperties: false
+                      deleted:
+                        type: array
+                        items:
+                          type: string
+                    required:
+                      - changed
+                      - deleted
+                    additionalProperties: false
+                  planner:
+                    type: object
+                    properties:
+                      changed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            weekStart:
+                              type: string
+                            dayOfWeek:
+                              type: integer
+                              minimum: 0
+                              maximum: 6
+                            order:
+                              type: integer
+                              minimum: -9007199254740991
+                              maximum: 9007199254740991
+                            type:
+                              type: string
+                              enum:
+                                - RECIPE
+                                - CUSTOM
+                            recipe:
+                              type:
+                                - object
+                                - 'null'
+                              properties:
+                                id:
+                                  type: string
+                                title:
+                                  type: string
+                                category:
+                                  type: string
+                                  enum:
+                                    - BREAKFAST
+                                    - DINNER
+                                    - DESSERT
+                                    - COCKTAILS
+                                tags:
+                                  type: array
+                                  items:
+                                    type: string
+                                featured:
+                                  type: boolean
+                                content:
+                                  type: object
+                                  properties:
+                                    title:
+                                      type: string
+                                      minLength: 1
+                                    prepTime:
+                                      type:
+                                        - integer
+                                        - 'null'
+                                      exclusiveMinimum: 0
+                                      maximum: 9007199254740991
+                                    cookTime:
+                                      type:
+                                        - integer
+                                        - 'null'
+                                      exclusiveMinimum: 0
+                                      maximum: 9007199254740991
+                                    servings:
+                                      type:
+                                        - integer
+                                        - 'null'
+                                      exclusiveMinimum: 0
+                                      maximum: 9007199254740991
+                                    description:
+                                      type:
+                                        - string
+                                        - 'null'
+                                    sourceUrl:
+                                      type:
+                                        - string
+                                        - 'null'
+                                      format: uri
+                                    imageUrl:
+                                      type:
+                                        - string
+                                        - 'null'
+                                      format: uri
+                                    ingredients:
+                                      type: array
+                                      items:
+                                        anyOf:
+                                          - type: string
+                                          - type: object
+                                            properties:
+                                              name:
+                                                type: string
+                                                minLength: 1
+                                              items:
+                                                type: array
+                                                items:
+                                                  type: string
+                                            required:
+                                              - name
+                                              - items
+                                            additionalProperties: false
+                                    steps:
+                                      type: array
+                                      items:
+                                        type: string
+                                    notes:
+                                      type: array
+                                      items:
+                                        type: string
+                                  required:
+                                    - title
+                                    - ingredients
+                                    - steps
+                                    - notes
+                                  additionalProperties: false
+                                createdBy:
+                                  type:
+                                    - object
+                                    - 'null'
+                                  properties:
+                                    id:
+                                      type: string
+                                    displayName:
+                                      type:
+                                        - string
+                                        - 'null'
+                                  required:
+                                    - id
+                                    - displayName
+                                  additionalProperties: false
+                                shareUrl:
+                                  type: string
+                                  format: uri
+                                createdAt:
+                                  type: string
+                                  format: date-time
+                                  pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                                updatedAt:
+                                  type: string
+                                  format: date-time
+                                  pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                              required:
+                                - id
+                                - title
+                                - category
+                                - tags
+                                - featured
+                                - content
+                                - createdBy
+                                - shareUrl
+                                - createdAt
+                                - updatedAt
+                              additionalProperties: false
+                            customText:
+                              type:
+                                - string
+                                - 'null'
+                            createdBy:
+                              type:
+                                - object
+                                - 'null'
+                              properties:
+                                id:
+                                  type: string
+                                displayName:
+                                  type:
+                                    - string
+                                    - 'null'
+                              required:
+                                - id
+                                - displayName
+                              additionalProperties: false
+                            createdAt:
+                              type: string
+                              format: date-time
+                              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                          required:
+                            - id
+                            - weekStart
+                            - dayOfWeek
+                            - order
+                            - type
+                            - recipe
+                            - customText
+                            - createdBy
+                            - createdAt
+                            - updatedAt
+                          additionalProperties: false
+                      deleted:
+                        type: array
+                        items:
+                          type: string
+                    required:
+                      - changed
+                      - deleted
+                    additionalProperties: false
+                  family:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      inviteToken:
+                        type:
+                          - string
+                          - 'null'
+                      inviteExpiresAt:
+                        type:
+                          - string
+                          - 'null'
+                        format: date-time
+                        pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                      members:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type:
+                                - string
+                                - 'null'
+                            displayName:
+                              type:
+                                - string
+                                - 'null'
+                            email:
+                              type: string
+                            image:
+                              type:
+                                - string
+                                - 'null'
+                          required:
+                            - id
+                            - name
+                            - displayName
+                            - email
+                            - image
+                          additionalProperties: false
+                    required:
+                      - id
+                      - name
+                      - inviteToken
+                      - inviteExpiresAt
+                      - members
+                    additionalProperties: false
+                  hasMore:
+                    type: boolean
+                required:
+                  - serverTime
+                  - full
+                  - recipes
+                  - planner
+                  - family
+                  - hasMore
+                additionalProperties: false
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: UNAUTHORIZED
+                      message:
+                        type: string
+        '422':
+          description: VALIDATION
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: VALIDATION
+                      message:
+                        type: string
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        const: INTERNAL
+                      message:
+                        type: string
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
