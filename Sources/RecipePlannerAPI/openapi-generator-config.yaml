@@ -1,3 +1,7 @@
 generate:
   - types
   - client
+# Default is `internal` — that would make every generated type and the
+# Client struct itself invisible outside this module, so `import
+# RecipePlannerAPI` from a consuming app would have nothing to reference.
+accessModifier: public
