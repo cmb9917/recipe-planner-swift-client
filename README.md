@@ -2,7 +2,7 @@
 
 A generated Swift client for the [recipe-planner](https://github.com/cmb9917/recipe-planner) API, built with [swift-openapi-generator](https://github.com/apple/swift-openapi-generator).
 
-No Swift code is committed here — `Sources/RecipePlannerAPI/openapi.yaml` is the only source of truth. Swift Package Manager regenerates the client's types and `Client` struct at build time via the `OpenAPIGenerator` build-tool plugin.
+No *generated* Swift code is committed here — `Sources/RecipePlannerAPI/openapi.yaml` is the source of truth, and Swift Package Manager regenerates the client's types and `Client` struct at build time via the `OpenAPIGenerator` build-tool plugin. The one hand-written file, `Client+RecipePlanner.swift`, is a thin `URLSessionTransport` convenience initializer — it's also required because SPM refuses to invoke a build-tool plugin for a target that contains no real source files at all.
 
 ## Adding to an iOS project
 
